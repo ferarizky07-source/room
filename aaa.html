@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Pukul Palu - Kura-kura vs Kelinci (Classroom Objects)</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', sans-serif; }
+  body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #ff9a56 0%, #ffcd69 50%, #a8e6cf 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 15px;
+    color: #2d3436;
+  }
+  .container {
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 25px;
+    max-width: 1000px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    border: 3px solid #fff;
+  }
+  h1 {
+    text-align: center;
+    margin-bottom: 8px;
+    font-size: 1.8em;
+    color: #2d3436;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+  }
+  .subtitle {
+    text-align: center;
+    margin-bottom: 15px;
+    opacity: 0.8;
+    font-size: 0.9em;
+    color: #636e72;
+  }
+  .score-board {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    margin-bottom: 15px;
+    background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+    padding: 12px;
+    border-radius: 15px;
+    color: #fff;
+  }
+  .score-item { text-align: center; flex: 1; }
+  .score-item .label { font-size: 0.85em; opacity: 0.9; }
+  .score-item .value { font-size: 1.8em; font-weight: bold; }
+  .score-item.left .value { color: #55efc4; }
+  .score-item.right .value { color: #fd79a8; }
+  .score-item.center .value { color: #ffeaa7; font-size: 1.2em; }
+
+  .turn-indicator {
+    text-align: center;
+    padding: 10px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    font-weight: bold;
+    font-size: 1.1em;
+    transition: all 0.4s;
+  }
+  .turn-indicator.left-turn {
+    background: linear-gradient(135deg, #00b894, #00cec9);
+    color: #fff;
+    box-shadow: 0 0 20px rgba(0,184,148,0.5);
+  }
+  .turn-indicator.right-turn {
+    background: linear-gradient(135deg, #fd79a8, #e84393);
+    color: #fff;
+    box-shadow: 0 0 20px rgba(253,121,168,0.5);
+  }
+
+  /* Whack-a-mole Arena */
+  .arena {
+    position: relative;
+    background: linear-gradient(to bottom, #87ceeb 0%, #98d98e 50%, #7cb342 100%);
+    border-radius: 15px;
+    padding: 20px 15px;
+    margin-bottom: 15px;
+    border: 3px solid #fff;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.15);
+    overflow: hidden;
+  }
+  .arena::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: 
+      radial-gradient(circle at 20% 30%, rgba(255,255,255,0.2) 2px, transparent 3px),
+      radial-gradient(circle at 80% 60%, rgba(255,255,255,0.2) 2px, transparent 3px),
+      radial-gradient(circle at 50% 80%, rgba(255,255,255,0.2) 2px, transparent 3px);
+    background-size: 100px 100px;
+    pointer-events: none;
+  }
+
+  /* Progress Bar (Tali) */
+  .progress-container {
+    position: relative;
+    height: 30px;
+    background: rgba(255,255,255,0.5);
+    border-radius: 15px;
+    margin-bottom: 20px;
+    border: 2px solid #fff;
+    overflow: hidden;
+  }
+  .progress-bar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 8px;
+    background: #2d3436;
+    transform: translateX(-50%);
+    z-index: 2;
+  }
+  .progress-fill-left {
+    position: absolute;
+    top: 0;
+    right: 50%;
+    bottom: 0;
+    background: linear-gradient(90deg, #00b894, #55efc4);
+    transition: width 0.8s ease;
+    width: 0%;
+  }
+  .progress-fill-right {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    bottom: 0;
+    background: linear-gradient(90deg, #fd79a8, #e84393);
+    transition: width 0.8s ease;
+    width: 0%;
+  }
+  .progress-label {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-weight: bold;
+    font-size: 0.85em;
+    z-index: 3;
+    color: #fff;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+  }
+  .progress-label.left { left: 10px; }
+  .progress-label.right { right: 10px; }
+
+  /* Holes Grid */
+  .holes-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    position: relative;
+    z-index: 1;
+  }
+  .team-side {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .hole {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    background: radial-gradient(ellipse at center, #3e2723 0%, #5d4037 60%, #6d4c41 100%);
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow: 
+      inset 0 8px 15px rgba(0,0,0,0.5),
+      0 4px 8px rgba(0,0,0,0.3);
+    border: 3px solid #4e342e;
+  }
+  .hole::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40%;
+    background: linear-gradient(to top, rgba(0,0,0,0.6), transparent);
+    pointer-events: none;
+    z-index: 3;
+  }
+  .character {
+    position: absolute;
+    bottom: -100%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 2.5em;
+    transition: bottom 0.4s ease;
+    z-index: 2;
+    filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.5));
+  }
+  .character.show {
+    bottom: 10%;
+    animation: wobble 0.5s ease infinite alternate;
+  }
+  @keyframes wobble {
+    from { transform: translateX(-50%) rotate(-5deg); }
+    to { transform: translateX(-50%) rotate(5deg); }
+  }
+  .character.hit {
+    animation: hitAnim 0.5s ease forwards;
+  }
+  @keyframes hitAnim {
+    0% { bottom: 10%; transform: translateX(-50%) rotate(0); }
+    30% { bottom: 20%; transform: translateX(-50%) rotate(-20deg) scale(1.2); }
+    60% { bottom: 5%; transform: translateX(-50%) rotate(20deg) scale(0.8); opacity: 0.5; }
+    100% { bottom: -100%; transform: translateX(-50%) rotate(0); opacity: 0; }
+  }
+  .character.miss {
+    animation: missAnim 0.6s ease forwards;
+  }
+  @keyframes missAnim {
+    0% { bottom: 10%; transform: translateX(-50%); }
+    50% { bottom: 20%; transform: translateX(calc(-50% + 30px)) rotate(15deg); }
+    100% { bottom: -100%; transform: translateX(calc(-50% + 50px)) rotate(30deg); opacity: 0; }
+  }
+
+  /* Hammer */
+  .hammer {
+    position: absolute;
+    font-size: 3em;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%) rotate(-30deg);
+    opacity: 0;
+    z-index: 10;
+    pointer-events: none;
+    transition: all 0.2s ease;
+  }
+  .hammer.smash {
+    animation: smashAnim 0.4s ease;
+  }
+  @keyframes smashAnim {
+    0% { top: -20px; transform: translateX(-50%) rotate(-30deg); opacity: 1; }
+    50% { top: 30%; transform: translateX(-50%) rotate(20deg); opacity: 1; }
+    100% { top: -20px; transform: translateX(-50%) rotate(-30deg); opacity: 0; }
+  }
+
+  /* Impact Effect */
+  .impact {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2em;
+    opacity: 0;
+    z-index: 5;
+    pointer-events: none;
+  }
+  .impact.show {
+    animation: impactAnim 0.6s ease forwards;
+  }
+  @keyframes impactAnim {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.5); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(2); }
+  }
+
+  /* Question Area */
+  .question-box {
+    background: rgba(108,92,231,0.1);
+    padding: 18px;
+    border-radius: 15px;
+    margin-bottom: 10px;
+    border: 2px solid #6c5ce7;
+  }
+  .q-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .q-number {
+    color: #6c5ce7;
+    font-weight: bold;
+    font-size: 0.9em;
+  }
+  .q-topic {
+    background: rgba(108,92,231,0.2);
+    border: 1px solid #6c5ce7;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8em;
+    color: #6c5ce7;
+    font-weight: bold;
+  }
+  .question {
+    font-size: 1.1em;
+    margin-bottom: 15px;
+    line-height: 1.5;
+    color: #2d3436;
+  }
+  .options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .option {
+    background: #fff;
+    border: 2px solid #dfe6e9;
+    color: #2d3436;
+    padding: 12px 15px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-align: left;
+    font-size: 0.92em;
+  }
+  .option:hover:not(:disabled) {
+    background: #dfe6e9;
+    transform: translateY(-2px);
+    border-color: #6c5ce7;
+  }
+  .option.correct {
+    background: #00b894 !important;
+    border-color: #55efc4 !important;
+    color: #fff !important;
+    animation: correctPulse 0.5s;
+  }
+  .option.wrong {
+    background: #d63031 !important;
+    border-color: #ff7675 !important;
+    color: #fff !important;
+    animation: shake 0.5s;
+  }
+  @keyframes correctPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+  .feedback {
+    margin-top: 15px;
+    padding: 12px;
+    border-radius: 10px;
+    text-align: center;
+    font-weight: bold;
+    display: none;
+  }
+  .feedback.show { display: block; animation: fadeIn 0.4s; }
+  .feedback.correct { background: rgba(0,184,148,0.2); color: #00b894; }
+  .feedback.wrong { background: rgba(214,48,49,0.2); color: #d63031; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Result Screen */
+  .result-screen {
+    display: none;
+    text-align: center;
+    padding: 30px;
+    background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+    border-radius: 15px;
+    color: #fff;
+  }
+  .result-screen.show { display: block; animation: fadeIn 0.6s; }
+  .result-icon { font-size: 5em; margin-bottom: 15px; }
+  .result-title { font-size: 2em; margin-bottom: 10px; }
+  .result-msg { font-size: 1.05em; margin-bottom: 20px; line-height: 1.6; }
+  .btn {
+    background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+    color: #2d3436;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 10px;
+    font-weight: bold;
+    font-size: 1em;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: transform 0.2s;
+  }
+  .btn:hover { transform: scale(1.05); }
+
+  @media (max-width: 600px) {
+    .options { grid-template-columns: 1fr; }
+    h1 { font-size: 1.3em; }
+    .character { font-size: 1.8em; }
+    .score-item .value { font-size: 1.4em; }
+    .hammer { font-size: 2em; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🔨 Pukul Palu: Kura-kura vs Kelinci 🐢🐰</h1>
+  <p class="subtitle">English Vocabulary — Classroom Objects (Benda di Kelas)</p>
+
+  <div class="score-board">
+    <div class="score-item left">
+      <div class="label">🐢 KURA-KURA</div>
+      <div class="value" id="scoreLeft">0</div>
+    </div>
+    <div class="score-item center">
+      <div class="label">📋 RONDE</div>
+      <div class="value" id="roundInfo">1 / 5</div>
+    </div>
+    <div class="score-item right">
+      <div class="label">🐰 KELINCI</div>
+      <div class="value" id="scoreRight">0</div>
+    </div>
+  </div>
+
+  <div class="turn-indicator left-turn" id="turnIndicator">
+    🎯 Giliran: KURA-KURA 🐢 — Pukul karakter yang muncul!
+  </div>
+
+  <div class="arena" id="arena">
+    <!-- Progress Bar -->
+    <div class="progress-container">
+      <div class="progress-fill-left" id="progressLeft"></div>
+      <div class="progress-fill-right" id="progressRight"></div>
+      <div class="progress-bar"></div>
+      <div class="progress-label left">🐢</div>
+      <div class="progress-label right">🐰</div>
+    </div>
+
+    <!-- Holes -->
+    <div class="holes-container">
+      <div class="team-side" id="leftSide">
+        <div class="hole" data-side="left">
+          <div class="character">🐢</div>
+          <div class="hammer">🔨</div>
+          <div class="impact">💥</div>
+        </div>
+        <div class="hole" data-side="left">
+          <div class="character">🐢</div>
+          <div class="hammer">🔨</div>
+          <div class="impact">💥</div>
+        </div>
+        <div class="hole" data-side="left">
+          <div class="character">🐢</div>
+          <div class="hammer">🔨</div>
+          <div class="impact">💥</div>
+        </div>
+      </div>
+      <div class="team-side" id="rightSide">
+        <div class="hole" data-side="right">
+          <div class="character">🐰</div>
+          <div class="hammer">🔨</div>
+          <div class="impact">💥</div>
+        </div>
+        <div class="hole" data-side="right">
+          <div class="character">🐰</div>
+          <div class="hammer">🔨</div>
+          <div class="impact">💥</div>
+        </div>
+        <div class="hole" data-side="right">
+          <div class="character">🐰</div>
+          <div class="hammer">🔨</div>
+          <div class="impact">💥</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="gameArea">
+    <div class="question-box">
+      <div class="q-header">
+        <div class="q-number" id="qNumber">Soal 1 dari 10</div>
+        <div class="q-topic" id="qTopic">📚 Classroom</div>
+      </div>
+      <div class="question" id="questionText">Memuat pertanyaan...</div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback"></div>
+    </div>
+  </div>
+
+  <div class="result-screen" id="resultScreen">
+    <div class="result-icon" id="resultIcon">🏆</div>
+    <div class="result-title" id="resultTitle">Hasil Pertandingan</div>
+    <div class="result-msg" id="resultMsg"></div>
+    <button class="btn" onclick="restartGame()">🔄 Main Lagi</button>
+  </div>
+</div>
+
+<script>
+  // 5 topik benda kelas, masing-masing 2 soal (kiri & kanan)
+  const questions = [
+    {
+      topic: "📚 Book",
+      left: {
+        q: "What is the English word for 'buku'?",
+        options: ["Note", "Book", "Paper", "Letter"],
+        answer: 1,
+        explain: "'Buku' dalam bahasa Inggris adalah 'Book'. Book digunakan untuk membaca dan belajar."
+      },
+      right: {
+        q: "We use a book to ...?",
+        options: ["Write", "Read", "Cut", "Draw"],
+        answer: 1,
+        explain: "Buku (book) digunakan untuk membaca (read). 'Read' = membaca."
+      }
+    },
+    {
+      topic: "✏️ Pencil",
+      left: {
+        q: "What do we use to write on paper?",
+        options: ["Eraser", "Pencil", "Scissors", "Ruler"],
+        answer: 1,
+        explain: "Pensil (pencil) digunakan untuk menulis di atas kertas. Pencil = pensil."
+      },
+      right: {
+        q: "A pencil is made of ...?",
+        options: ["Plastic and metal", "Wood and graphite", "Paper and glue", "Glass and stone"],
+        answer: 1,
+        explain: "Pensil terbuat dari kayu (wood) dan grafit (graphite) sebagai ujungnya untuk menulis."
+      }
+    },
+    {
+      topic: "🧽 Eraser",
+      left: {
+        q: "What is used to remove pencil marks from paper?",
+        options: ["Ruler", "Eraser", "Sharpener", "Glue"],
+        answer: 1,
+        explain: "Penghapus (eraser) digunakan untuk menghapus tulisan pensil dari kertas. Eraser = penghapus."
+      },
+      right: {
+        q: "An eraser is usually made of ...?",
+        options: ["Wood", "Rubber", "Metal", "Glass"],
+        answer: 1,
+        explain: "Penghapus biasanya terbuat dari karet (rubber) yang lembut untuk menghapus tulisan."
+      }
+    },
+    {
+      topic: "📏 Ruler",
+      left: {
+        q: "What is the function of a ruler?",
+        options: ["To erase mistakes", "To measure length", "To cut paper", "To hold papers"],
+        answer: 1,
+        explain: "Penggaris (ruler) berfungsi untuk mengukur panjang (to measure length). Ruler = penggaris."
+      },
+      right: {
+        q: "A ruler is usually ... in shape.",
+        options: ["Round", "Long and flat", "Square", "Triangle"],
+        answer: 1,
+        explain: "Penggaris biasanya berbentuk panjang dan pipih (long and flat) untuk memudahkan pengukuran."
+      }
+    },
+    {
+      topic: "✂️ Scissors",
+      left: {
+        q: "What tool is used to cut paper?",
+        options: ["Pencil", "Scissors", "Eraser", "Book"],
+        answer: 1,
+        explain: "Gunting (scissors) digunakan untuk memotong kertas. Scissors = gunting."
+      },
+      right: {
+        q: "Scissors have two ... that cut when closed.",
+        options: ["Handles", "Blades", "Wheels", "Buttons"],
+        answer: 1,
+        explain: "Gunting memiliki dua bilah (blades) yang memotong saat ditutup. 'Blade' = mata pisau/bilah."
+      }
+    }
+  ];
+
+  let currentRound = 0;
+  let currentTurn = 'left';
+  let scoreLeft = 0;
+  let scoreRight = 0;
+  let totalQuestionsAnswered = 0;
+  let activeHole = null;
+
+  const turnIndicator = document.getElementById('turnIndicator');
+
+  function getRandomHole() {
+    const side = currentTurn === 'left' ? 'left' : 'right';
+    const holes = document.querySelectorAll(`.hole[data-side="${side}"]`);
+    const randomIndex = Math.floor(Math.random() * holes.length);
+    return holes[randomIndex];
+  }
+
+  function showCharacter() {
+    // Reset semua hole
+    document.querySelectorAll('.hole').forEach(hole => {
+      const char = hole.querySelector('.character');
+      char.classList.remove('show', 'hit', 'miss');
+      char.style.bottom = '-100%';
+    });
+
+    // Pilih hole acak sesuai giliran
+    activeHole = getRandomHole();
+    const character = activeHole.querySelector('.character');
+    character.classList.add('show');
+  }
+
+  function loadQuestion() {
+    const topic = questions[currentRound];
+    const qData = topic[currentTurn];
+
+    const qGlobalNum = currentRound * 2 + (currentTurn === 'left' ? 1 : 2);
+    document.getElementById('qNumber').textContent = `Soal ${qGlobalNum} dari 10`;
+    document.getElementById('qTopic').textContent = topic.topic;
+    document.getElementById('roundInfo').textContent = `${currentRound + 1} / 5`;
+
+    if (currentTurn === 'left') {
+      turnIndicator.className = 'turn-indicator left-turn';
+      turnIndicator.innerHTML = '🎯 Giliran: KURA-KURA 🐢 — Pukul karakter yang muncul!';
+    } else {
+      turnIndicator.className = 'turn-indicator right-turn';
+      turnIndicator.innerHTML = '🎯 Giliran: KELINCI 🐰 — Pukul karakter yang muncul!';
+    }
+
+    document.getElementById('questionText').textContent = qData.q;
+    document.getElementById('feedback').className = 'feedback';
+    document.getElementById('feedback').textContent = '';
+
+    const optionsDiv = document.getElementById('options');
+    optionsDiv.innerHTML = '';
+    qData.options.forEach((opt, idx) => {
+      const btn = document.createElement('button');
+      btn.className = 'option';
+      btn.textContent = String.fromCharCode(65+idx) + '. ' + opt;
+      btn.onclick = () => answerQuestion(idx, btn);
+      optionsDiv.appendChild(btn);
+    });
+
+    // Tampilkan karakter setelah soal dimuat
+    setTimeout(showCharacter, 300);
+  }
+
+  function answerQuestion(idx, btn) {
+    const qData = questions[currentRound][currentTurn];
+    const allOptions = document.querySelectorAll('.option');
+    allOptions.forEach(o => o.disabled = true);
+
+    const feedback = document.getElementById('feedback');
+    const isCorrect = idx === qData.answer;
+    const character = activeHole.querySelector('.character');
+    const hammer = activeHole.querySelector('.hammer');
+    const impact = activeHole.querySelector('.impact');
+
+    if (isCorrect) {
+      btn.classList.add('correct');
+      
+      // Animasi palu memukul
+      hammer.classList.add('smash');
+      setTimeout(() => {
+        character.classList.remove('show');
+        character.classList.add('hit');
+        impact.classList.add('show');
+      }, 200);
+
+      if (currentTurn === 'left') {
+        scoreLeft++;
+        feedback.className = 'feedback correct show';
+        feedback.innerHTML = `✅ <b>BENAR!</b> 🔨 PALU! Kura-kura terpukul!<br><small>${qData.explain}</small>`;
+        document.getElementById('scoreLeft').textContent = scoreLeft;
+      } else {
+        scoreRight++;
+        feedback.className = 'feedback correct show';
+        feedback.innerHTML = `✅ <b>BENAR!</b> 🔨 PALU! Kelinci terpukul!<br><small>${qData.explain}</small>`;
+        document.getElementById('scoreRight').textContent = scoreRight;
+      }
+    } else {
+      btn.classList.add('wrong');
+      allOptions[qData.answer].classList.add('correct');
+      
+      // Karakter kabur
+      character.classList.remove('show');
+      character.classList.add('miss');
+
+      if (currentTurn === 'left') {
+        // Kura-kura salah = kelinci dapat poin
+        scoreRight++;
+        feedback.className = 'feedback wrong show';
+        feedback.innerHTML = `❌ <b>SALAH!</b> Kura-kura kabur! Kelinci dapat poin!<br><small>Jawaban benar: <b>${qData.options[qData.answer]}</b><br>${qData.explain}</small>`;
+        document.getElementById('scoreRight').textContent = scoreRight;
+      } else {
+        // Kelinci salah = kura-kura dapat poin
+        scoreLeft++;
+        feedback.className = 'feedback wrong show';
+        feedback.innerHTML = `❌ <b>SALAH!</b> Kelinci kabur! Kura-kura dapat poin!<br><small>Jawaban benar: <b>${qData.options[qData.answer]}</b><br>${qData.explain}</small>`;
+        document.getElementById('scoreLeft').textContent = scoreLeft;
+      }
+    }
+
+    updateProgress();
+    totalQuestionsAnswered++;
+
+    setTimeout(() => {
+      hammer.classList.remove('smash');
+      impact.classList.remove('show');
+
+      if (currentTurn === 'left') {
+        currentTurn = 'right';
+      } else {
+        currentTurn = 'left';
+        currentRound++;
+      }
+
+      if (totalQuestionsAnswered < 10) {
+        loadQuestion();
+      } else {
+        showResult();
+      }
+    }, 2800);
+  }
+
+  function updateProgress() {
+    const totalPossible = 10;
+    const leftPercent = (scoreLeft / totalPossible) * 50;
+    const rightPercent = (scoreRight / totalPossible) * 50;
+    
+    document.getElementById('progressLeft').style.width = leftPercent + '%';
+    document.getElementById('progressRight').style.width = rightPercent + '%';
+  }
+
+  function showResult() {
+    document.getElementById('gameArea').style.display = 'none';
+    const resultScreen = document.getElementById('resultScreen');
+    resultScreen.classList.add('show');
+
+    const icon = document.getElementById('resultIcon');
+    const title = document.getElementById('resultTitle');
+    const msg = document.getElementById('resultMsg');
+
+    if (scoreLeft > scoreRight) {
+      icon.textContent = '🐢🏆';
+      title.textContent = 'KURA-KURA MENANG! 🎉';
+      title.style.color = '#55efc4';
+      msg.innerHTML = `Selamat! Kura-kura memenangkan pertandingan!<br>
+                       Skor akhir: <b>Kura-kura ${scoreLeft} - ${scoreRight} Kelinci</b><br>
+                       Penguasaan vocabulary classroom objects sangat baik! 👏<br>
+                       <small>"Slow and steady wins the game!"</small>`;
+    } else if (scoreRight > scoreLeft) {
+      icon.textContent = '🐰🏆';
+      title.textContent = 'KELINCI MENANG!';
+      title.style.color = '#fd79a8';
+      msg.innerHTML = `Kelinci memenangkan pertandingan!<br>
+                       Skor akhir: <b>Kelinci ${scoreRight} - ${scoreLeft} Kura-kura</b><br>
+                       Ayo pelajari kembali nama-nama benda di kelas dan coba lagi! 📚`;
+    } else {
+      icon.textContent = '🤝';
+      title.textContent = 'PERTANDINGAN SERI!';
+      title.style.color = '#ffeaa7';
+      msg.innerHTML = `Kura-kura dan kelinci bermain imbang!<br>
+                       Skor akhir <b>${scoreLeft} - ${scoreRight}</b>.<br>
+                       Main lagi untuk menentukan pemenang!`;
+    }
+  }
+
+  function restartGame() {
+    currentRound = 0;
+    currentTurn = 'left';
+    scoreLeft = 0;
+    scoreRight = 0;
+    totalQuestionsAnswered = 0;
+    document.getElementById('scoreLeft').textContent = '0';
+    document.getElementById('scoreRight').textContent = '0';
+    document.getElementById('progressLeft').style.width = '0%';
+    document.getElementById('progressRight').style.width = '0%';
+    document.getElementById('gameArea').style.display = 'block';
+    document.getElementById('resultScreen').classList.remove('show');
+    
+    // Reset semua hole
+    document.querySelectorAll('.hole').forEach(hole => {
+      const char = hole.querySelector('.character');
+      char.classList.remove('show', 'hit', 'miss');
+      char.style.bottom = '-100%';
+    });
+
+    loadQuestion();
+  }
+
+  loadQuestion();
+</script>
+</body>
+</html>
