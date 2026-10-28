@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Balapan F1 - Workshop Tools</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', sans-serif; }
+  body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 15px;
+    color: #fff;
+  }
+  .container {
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 25px;
+    max-width: 1000px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    border: 2px solid rgba(255,255,255,0.2);
+  }
+  h1 {
+    text-align: center;
+    margin-bottom: 8px;
+    font-size: 1.8em;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    background: linear-gradient(135deg, #e94560, #f39c12);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .subtitle {
+    text-align: center;
+    margin-bottom: 15px;
+    opacity: 0.9;
+    font-size: 0.9em;
+  }
+  .score-board {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    margin-bottom: 15px;
+    background: rgba(0,0,0,0.5);
+    padding: 12px;
+    border-radius: 15px;
+    border: 2px solid rgba(255,255,255,0.1);
+  }
+  .score-item { text-align: center; flex: 1; }
+  .score-item .label { font-size: 0.85em; opacity: 0.9; }
+  .score-item .value { font-size: 1.8em; font-weight: bold; }
+  .score-item.red .value { color: #e94560; }
+  .score-item.black .value { color: #95a5a6; }
+  .score-item.center .value { color: #f39c12; font-size: 1.2em; }
+
+  .turn-indicator {
+    text-align: center;
+    padding: 10px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    font-weight: bold;
+    font-size: 1.1em;
+    transition: all 0.4s;
+  }
+  .turn-indicator.red-turn {
+    background: linear-gradient(135deg, #e94560, #c0392b);
+    box-shadow: 0 0 20px rgba(233,69,96,0.5);
+  }
+  .turn-indicator.black-turn {
+    background: linear-gradient(135deg, #2c3e50, #34495e);
+    box-shadow: 0 0 20px rgba(44,62,80,0.5);
+  }
+
+  /* Race Track */
+  .race-track {
+    position: relative;
+    background: linear-gradient(to bottom, #2c3e50 0%, #34495e 100%);
+    border-radius: 15px;
+    padding: 20px 15px;
+    margin-bottom: 15px;
+    border: 3px solid #f39c12;
+    box-shadow: inset 0 0 30px rgba(0,0,0,0.5);
+    overflow: hidden;
+  }
+  .race-track::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: 
+      repeating-linear-gradient(90deg, transparent, transparent 50px, rgba(255,255,255,0.05) 50px, rgba(255,255,255,0.05) 51px);
+    pointer-events: none;
+  }
+
+  .lane {
+    position: relative;
+    height: 80px;
+    background: repeating-linear-gradient(
+      90deg,
+      #1a1a1a 0px,
+      #1a1a1a 40px,
+      #2a2a2a 40px,
+      #2a2a2a 80px
+    );
+    border-radius: 10px;
+    margin-bottom: 15px;
+    border: 2px solid #f39c12;
+    overflow: hidden;
+    box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
+  }
+  .lane:last-child { margin-bottom: 0; }
+  
+  .lane-label {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-weight: bold;
+    font-size: 0.9em;
+    color: #f39c12;
+    z-index: 3;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+  }
+
+  .finish-line {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 30px;
+    height: 100%;
+    background: repeating-linear-gradient(
+      90deg,
+      #fff 0px,
+      #fff 5px,
+      #000 5px,
+      #000 10px
+    );
+    z-index: 1;
+    box-shadow: 0 0 10px rgba(255,255,255,0.5);
+  }
+  .finish-line::before {
+    content: '🏁';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.5em;
+  }
+
+  .car {
+    position: absolute;
+    left: 5%;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 3em;
+    transition: left 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 2;
+    filter: drop-shadow(3px 3px 6px rgba(0,0,0,0.8));
+  }
+  .car.active {
+    animation: engineRev 0.2s infinite alternate;
+  }
+  @keyframes engineRev {
+    from { transform: translateY(-50%) scale(1); }
+    to { transform: translateY(-50%) scale(1.05); }
+  }
+  .car.winner {
+    animation: celebrate 0.5s infinite alternate;
+  }
+  @keyframes celebrate {
+    from { transform: translateY(-50%) scale(1) rotate(-3deg); }
+    to { transform: translateY(-55%) scale(1.1) rotate(3deg); }
+  }
+
+  /* Question Area */
+  .question-box {
+    background: rgba(0,0,0,0.5);
+    padding: 18px;
+    border-radius: 15px;
+    margin-bottom: 10px;
+    border: 2px solid rgba(243,156,18,0.3);
+  }
+  .q-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .q-number {
+    color: #f39c12;
+    font-weight: bold;
+    font-size: 0.9em;
+  }
+  .q-topic {
+    background: rgba(243,156,18,0.2);
+    border: 1px solid #f39c12;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8em;
+    color: #f39c12;
+    font-weight: bold;
+  }
+  .question {
+    font-size: 1.1em;
+    margin-bottom: 15px;
+    line-height: 1.5;
+  }
+  .options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .option {
+    background: rgba(255,255,255,0.1);
+    border: 2px solid rgba(255,255,255,0.3);
+    color: #fff;
+    padding: 12px 15px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-align: left;
+    font-size: 0.92em;
+  }
+  .option:hover:not(:disabled) {
+    background: rgba(255,255,255,0.2);
+    transform: translateY(-2px);
+    border-color: #f39c12;
+  }
+  .option.correct {
+    background: #27ae60 !important;
+    border-color: #2ecc71 !important;
+    animation: correctPulse 0.5s;
+  }
+  .option.wrong {
+    background: #c0392b !important;
+    border-color: #e74c3c !important;
+    animation: shake 0.5s;
+  }
+  @keyframes correctPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+  .feedback {
+    margin-top: 15px;
+    padding: 12px;
+    border-radius: 10px;
+    text-align: center;
+    font-weight: bold;
+    display: none;
+  }
+  .feedback.show { display: block; animation: fadeIn 0.4s; }
+  .feedback.correct { background: rgba(39,174,96,0.3); border: 1px solid #27ae60; }
+  .feedback.wrong { background: rgba(192,57,43,0.3); border: 1px solid #c0392b; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Result Screen */
+  .result-screen {
+    display: none;
+    text-align: center;
+    padding: 30px;
+    background: linear-gradient(135deg, #e94560, #f39c12);
+    border-radius: 15px;
+  }
+  .result-screen.show { display: block; animation: fadeIn 0.6s; }
+  .result-icon { font-size: 5em; margin-bottom: 15px; }
+  .result-title { font-size: 2em; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+  .result-msg { font-size: 1.05em; margin-bottom: 20px; line-height: 1.6; }
+  .btn {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    color: #fff;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 10px;
+    font-weight: bold;
+    font-size: 1em;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: transform 0.2s;
+    box-shadow: 0 4px 15px rgba(243,156,18,0.4);
+  }
+  .btn:hover { transform: scale(1.05); }
+
+  @media (max-width: 600px) {
+    .options { grid-template-columns: 1fr; }
+    h1 { font-size: 1.3em; }
+    .car { font-size: 2em; }
+    .score-item .value { font-size: 1.4em; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🏎️ Balapan F1: Workshop Tools 🔧</h1>
+  <p class="subtitle">English Vocabulary — Alat Bengkel</p>
+
+  <div class="score-board">
+    <div class="score-item red">
+      <div class="label">🔴 MOBIL MERAH</div>
+      <div class="value" id="scoreRed">0</div>
+    </div>
+    <div class="score-item center">
+      <div class="label">📋 RONDE</div>
+      <div class="value" id="roundInfo">1 / 5</div>
+    </div>
+    <div class="score-item black">
+      <div class="label">⚫ MOBIL HITAM</div>
+      <div class="value" id="scoreBlack">0</div>
+    </div>
+  </div>
+
+  <div class="turn-indicator red-turn" id="turnIndicator">
+    🏁 Giliran: MOBIL MERAH 🔴
+  </div>
+
+  <div class="race-track">
+    <div class="lane">
+      <div class="lane-label">🔴 MERAH</div>
+      <div class="finish-line"></div>
+      <div class="car" id="carRed">🏎️</div>
+    </div>
+    <div class="lane">
+      <div class="lane-label">⚫ HITAM</div>
+      <div class="finish-line"></div>
+      <div class="car" id="carBlack">🏎️</div>
+    </div>
+  </div>
+
+  <div id="gameArea">
+    <div class="question-box">
+      <div class="q-header">
+        <div class="q-number" id="qNumber">Soal 1 dari 10</div>
+        <div class="q-topic" id="qTopic">🔧 Workshop</div>
+      </div>
+      <div class="question" id="questionText">Memuat pertanyaan...</div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback"></div>
+    </div>
+  </div>
+
+  <div class="result-screen" id="resultScreen">
+    <div class="result-icon" id="resultIcon">🏆</div>
+    <div class="result-title" id="resultTitle">Hasil Balapan</div>
+    <div class="result-msg" id="resultMsg"></div>
+    <button class="btn" onclick="restartGame()">🔄 Balapan Lagi</button>
+  </div>
+</div>
+
+<script>
+  // 5 topik alat bengkel, masing-masing 2 soal (merah & hitam)
+  const questions = [
+    {
+      topic: "🔧 Wrench",
+      red: {
+        q: "What is the English name of 'kunci pas'?",
+        options: ["Screwdriver", "Wrench", "Hammer", "Pliers"],
+        answer: 1,
+        explain: "'Kunci pas' dalam bahasa Inggris adalah 'Wrench'. Wrench digunakan untuk memutar baut dan mur."
+      },
+      black: {
+        q: "A wrench is used to ...?",
+        options: ["Cut wood", "Tighten bolts and nuts", "Drill holes", "Measure length"],
+        answer: 1,
+        explain: "Kunci pas (wrench) digunakan untuk mengencangkan baut dan mur (to tighten bolts and nuts)."
+      }
+    },
+    {
+      topic: "🪛 Screwdriver",
+      red: {
+        q: "What tool is used to turn screws?",
+        options: ["Wrench", "Hammer", "Screwdriver", "Pliers"],
+        answer: 2,
+        explain: "Obeng (screwdriver) digunakan untuk memutar sekrup. Screw = sekrup, driver = penggerak/pemutar."
+      },
+      black: {
+        q: "There are two main types of screwdrivers: flathead and ...?",
+        options: ["Roundhead", "Phillips", "Squarehead", "Trianglehead"],
+        answer: 1,
+        explain: "Ada 2 jenis obeng utama: flathead (minus) dan Phillips (plus/bintang). Phillips adalah yang paling umum."
+      }
+    },
+    {
+      topic: "🔨 Hammer",
+      red: {
+        q: "What is the English word for 'palu'?",
+        options: ["Hammer", "Mallet", "Axe", "Sledge"],
+        answer: 0,
+        explain: "'Palu' dalam bahasa Inggris adalah 'Hammer'. Hammer digunakan untuk memukul paku."
+      },
+      black: {
+        q: "A hammer is commonly used to drive ... into wood.",
+        options: ["Screws", "Nails", "Bolts", "Rivets"],
+        answer: 1,
+        explain: "Palu (hammer) biasanya digunakan untuk memukul paku (nails) ke dalam kayu."
+      }
+    },
+    {
+      topic: "🔩 Pliers",
+      red: {
+        q: "What tool is used to grip, bend, and cut wire?",
+        options: ["Wrench", "Screwdriver", "Pliers", "Hammer"],
+        answer: 2,
+        explain: "Tang (pliers) digunakan untuk mencengkeram, membengkokkan, dan memotong kawat. Pliers = tang."
+      },
+      black: {
+        q: "Pliers have two flat surfaces called ... that grip objects.",
+        options: ["Blades", "Jaws", "Handles", "Teeth"],
+        answer: 1,
+        explain: "Tang memiliki dua permukaan datar yang disebut 'jaws' (rahang) untuk mencengkeram benda."
+      }
+    },
+    {
+      topic: "⚡ Drill",
+      red: {
+        q: "What is the English name of 'bor'?",
+        options: ["Saw", "Drill", "Chisel", "File"],
+        answer: 1,
+        explain: "'Bor' dalam bahasa Inggris adalah 'Drill'. Drill digunakan untuk membuat lubang pada benda keras."
+      },
+      black: {
+        q: "A drill uses a rotating ... to make holes in materials.",
+        options: ["Blade", "Bit", "Wheel", "Hammer"],
+        answer: 1,
+        explain: "Bor (drill) menggunakan mata bor yang berputar (rotating bit) untuk membuat lubang pada material."
+      }
+    }
+  ];
+
+  let currentRound = 0;
+  let currentTurn = 'red';
+  let scoreRed = 0;
+  let scoreBlack = 0;
+  let positionRed = 5; // persentase dari kiri
+  let positionBlack = 5;
+  let totalQuestionsAnswered = 0;
+
+  const carRed = document.getElementById('carRed');
+  const carBlack = document.getElementById('carBlack');
+  const turnIndicator = document.getElementById('turnIndicator');
+
+  function loadQuestion() {
+    const topic = questions[currentRound];
+    const qData = topic[currentTurn];
+
+    const qGlobalNum = currentRound * 2 + (currentTurn === 'red' ? 1 : 2);
+    document.getElementById('qNumber').textContent = `Soal ${qGlobalNum} dari 10`;
+    document.getElementById('qTopic').textContent = topic.topic;
+    document.getElementById('roundInfo').textContent = `${currentRound + 1} / 5`;
+
+    if (currentTurn === 'red') {
+      turnIndicator.className = 'turn-indicator red-turn';
+      turnIndicator.innerHTML = '🏁 Giliran: MOBIL MERAH 🔴';
+      carRed.classList.add('active');
+      carBlack.classList.remove('active');
+    } else {
+      turnIndicator.className = 'turn-indicator black-turn';
+      turnIndicator.innerHTML = '🏁 Giliran: MOBIL HITAM ⚫';
+      carBlack.classList.add('active');
+      carRed.classList.remove('active');
+    }
+
+    document.getElementById('questionText').textContent = qData.q;
+    document.getElementById('feedback').className = 'feedback';
+    document.getElementById('feedback').textContent = '';
+
+    const optionsDiv = document.getElementById('options');
+    optionsDiv.innerHTML = '';
+    qData.options.forEach((opt, idx) => {
+      const btn = document.createElement('button');
+      btn.className = 'option';
+      btn.textContent = String.fromCharCode(65+idx) + '. ' + opt;
+      btn.onclick = () => answerQuestion(idx, btn);
+      optionsDiv.appendChild(btn);
+    });
+  }
+
+  function answerQuestion(idx, btn) {
+    const qData = questions[currentRound][currentTurn];
+    const allOptions = document.querySelectorAll('.option');
+    allOptions.forEach(o => o.disabled = true);
+
+    const feedback = document.getElementById('feedback');
+    const isCorrect = idx === qData.answer;
+
+    if (isCorrect) {
+      btn.classList.add('correct');
+      if (currentTurn === 'red') {
+        scoreRed++;
+        positionRed += 18; // maju 18% per jawaban benar
+        feedback.className = 'feedback correct show';
+        feedback.innerHTML = `✅ <b>BENAR!</b> 🏎️ Mobil MERAH melaju kencang!<br><small>${qData.explain}</small>`;
+        document.getElementById('scoreRed').textContent = scoreRed;
+      } else {
+        scoreBlack++;
+        positionBlack += 18;
+        feedback.className = 'feedback correct show';
+        feedback.innerHTML = `✅ <b>BENAR!</b> 🏎️ Mobil HITAM melaju kencang!<br><small>${qData.explain}</small>`;
+        document.getElementById('scoreBlack').textContent = scoreBlack;
+      }
+    } else {
+      btn.classList.add('wrong');
+      allOptions[qData.answer].classList.add('correct');
+      if (currentTurn === 'red') {
+        // Mobil merah salah = mobil hitam maju
+        positionBlack += 18;
+        feedback.className = 'feedback wrong show';
+        feedback.innerHTML = `❌ <b>SALAH!</b> 🏎️ Mobil HITAM mengambil alih!<br><small>Jawaban benar: <b>${qData.options[qData.answer]}</b><br>${qData.explain}</small>`;
+      } else {
+        // Mobil hitam salah = mobil merah maju
+        positionRed += 18;
+        feedback.className = 'feedback wrong show';
+        feedback.innerHTML = `❌ <b>SALAH!</b> 🏎️ Mobil MERAH mengambil alih!<br><small>Jawaban benar: <b>${qData.options[qData.answer]}</b><br>${qData.explain}</small>`;
+      }
+    }
+
+    updatePositions();
+    totalQuestionsAnswered++;
+
+    setTimeout(() => {
+      carRed.classList.remove('active');
+      carBlack.classList.remove('active');
+
+      if (currentTurn === 'red') {
+        currentTurn = 'black';
+      } else {
+        currentTurn = 'red';
+        currentRound++;
+      }
+
+      if (totalQuestionsAnswered < 10) {
+        loadQuestion();
+      } else {
+        showResult();
+      }
+    }, 2800);
+  }
+
+  function updatePositions() {
+    // Batasi posisi maksimal 90% (finish line)
+    positionRed = Math.min(positionRed, 90);
+    positionBlack = Math.min(positionBlack, 90);
+    
+    carRed.style.left = positionRed + '%';
+    carBlack.style.left = positionBlack + '%';
+  }
+
+  function showResult() {
+    document.getElementById('gameArea').style.display = 'none';
+    carRed.classList.remove('active');
+    carBlack.classList.remove('active');
+    
+    // Tambahkan animasi winner
+    if (positionRed > positionBlack) {
+      carRed.classList.add('winner');
+    } else if (positionBlack > positionRed) {
+      carBlack.classList.add('winner');
+    }
+
+    const resultScreen = document.getElementById('resultScreen');
+    resultScreen.classList.add('show');
+
+    const icon = document.getElementById('resultIcon');
+    const title = document.getElementById('resultTitle');
+    const msg = document.getElementById('resultMsg');
+
+    if (positionRed > positionBlack) {
+      icon.textContent = '🔴🏆';
+      title.textContent = 'MOBIL MERAH MENANG! 🎉';
+      title.style.color = '#e94560';
+      msg.innerHTML = `Selamat! Mobil MERAH sampai finish lebih dulu!<br>
+                       Skor akhir: <b>Merah ${scoreRed} - ${scoreBlack} Hitam</b><br>
+                       Penguasaan vocabulary alat bengkel sangat baik! 👏<br>
+                       <small>"Speed and knowledge win the race!"</small>`;
+    } else if (positionBlack > positionRed) {
+      icon.textContent = '⚫🏆';
+      title.textContent = 'MOBIL HITAM MENANG!';
+      title.style.color = '#95a5a6';
+      msg.innerHTML = `Mobil HITAM sampai finish lebih dulu!<br>
+                       Skor akhir: <b>Hitam ${scoreBlack} - ${scoreRed} Merah</b><br>
+                       Ayo pelajari kembali nama-nama alat bengkel dan coba lagi! 🔧`;
+    } else {
+      icon.textContent = '🤝';
+      title.textContent = 'BALAPAN SERI!';
+      title.style.color = '#f39c12';
+      msg.innerHTML = `Kedua mobil sampai finish bersamaan!<br>
+                       Skor akhir <b>${scoreRed} - ${scoreBlack}</b>.<br>
+                       Balapan lagi untuk menentukan pemenang!`;
+    }
+  }
+
+  function restartGame() {
+    currentRound = 0;
+    currentTurn = 'red';
+    scoreRed = 0;
+    scoreBlack = 0;
+    positionRed = 5;
+    positionBlack = 5;
+    totalQuestionsAnswered = 0;
+    document.getElementById('scoreRed').textContent = '0';
+    document.getElementById('scoreBlack').textContent = '0';
+    document.getElementById('gameArea').style.display = 'block';
+    document.getElementById('resultScreen').classList.remove('show');
+    carRed.style.left = '5%';
+    carBlack.style.left = '5%';
+    carRed.classList.remove('winner');
+    carBlack.classList.remove('winner');
+    loadQuestion();
+  }
+
+  loadQuestion();
+</script>
+</body>
+</html>
